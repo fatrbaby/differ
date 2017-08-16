@@ -12,6 +12,8 @@ func main() {
 	}
 
 	for _, pathName := range os.Args[1:]{
-		fmt.Println(pathName)
+		files := Scan(pathName)
+		sameFiles := Compare(files)
+		fmt.Printf("%v\n", sameFiles)
 	}
 }

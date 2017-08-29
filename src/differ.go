@@ -18,11 +18,8 @@ func main() {
 	err := Scan("/usr/local/var/www/app")
 
 	if err == nil {
-		fmt.Println("files:")
-		fmt.Sprintf("%v\n", Files)
-	} else {
-		fmt.Println("errors:")
 		fmt.Fprintf(os.Stderr, "%v", err)
+		os.Exit(1)
 	}
 }
 
@@ -42,4 +39,8 @@ func Scan(path string) error {
 	})
 
 	return err
+}
+
+func ()  {
+	
 }

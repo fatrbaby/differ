@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"crypto/md5"
+	"io"
 )
 
 var Files []string
@@ -17,9 +19,13 @@ func main() {
 
 	err := Scan("/usr/local/var/www/app")
 
-	if err == nil {
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v", err)
 		os.Exit(1)
+	}
+
+	for _, file := range Files {
+		fmt.Println(FileMd5(file))
 	}
 }
 
@@ -41,6 +47,22 @@ func Scan(path string) error {
 	return err
 }
 
-func ()  {
-	
+func FileMd5(file string) (result string, err error) {
+	f, err := os.Open(file)
+
+	if err != nil {
+		return result, err
+	}
+
+	defer f.Close()
+
+	hasher := md5.New()
+
+	if _, err := io.Copy(hasher, f); err != nil {
+		return result, err
+	}
+
+	result = fmt.Sprintf("%x", hasher.Sum(nil))
+
+	return result, nil
 }

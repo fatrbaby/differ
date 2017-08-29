@@ -7,22 +7,26 @@ import (
 	"crypto/md5"
 	"io"
 	"bufio"
+	"flag"
 )
 
 var Files []string
 
-func main() {
-	/*
-	wc, _ := os.Getwd()
-	var directory = flag.String("dir", wc, "which dir you wanna scan")
-	flag.Parse()
-	*/
+var directory = flag.String("dir", "/null", "which dir you wanna scan")
 
-	err := Scan("/usr/local/var/www/app")
+func init()  {
+	flag.Parse()
+}
+
+func main() {
+	if _, err := os.Stat(*directory); err != nil {
+		panic(err)
+	}
+
+	err := Scan(*directory)
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
-		os.Exit(1)
+		panic(err)
 	}
 
 	for _, file := range Files {

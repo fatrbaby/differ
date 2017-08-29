@@ -12,13 +12,10 @@ import (
 
 var Files []string
 
-var directory = flag.String("dir", "/null", "which dir you wanna scan")
-
-func init()  {
-	flag.Parse()
-}
-
 func main() {
+	directory := flag.String("dir", "/null", "The directory you want to scan")
+	flag.Parse()
+
 	if _, err := os.Stat(*directory); err != nil {
 		panic(err)
 	}

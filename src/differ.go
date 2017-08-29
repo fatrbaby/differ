@@ -1,19 +1,45 @@
 package main
 
 import (
-	"os"
 	"fmt"
+	"os"
+	"path/filepath"
 )
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Printf("\n %c[1;30;41m%s%c[0m\n\n", 0x1B, "input a path you want to scan.", 0x1B)
-		os.Exit(0)
-	}
+var Files []string
 
-	for _, pathName := range os.Args[1:]{
-		files := Scan(pathName)
-		sameFiles := Compare(files)
-		fmt.Printf("%v\n", sameFiles)
+func main() {
+	/*
+	wc, _ := os.Getwd()
+	var directory = flag.String("dir", wc, "which dir you wanna scan")
+	flag.Parse()
+	*/
+
+	err := Scan("/usr/local/var/www/app")
+
+	if err == nil {
+		fmt.Println("files:")
+		fmt.Sprintf("%v\n", Files)
+	} else {
+		fmt.Println("errors:")
+		fmt.Fprintf(os.Stderr, "%v", err)
 	}
+}
+
+func Scan(path string) error {
+	err := filepath.Walk(path, func (path string, f os.FileInfo, err error) error {
+		if f == nil {
+			return err
+		}
+
+		if f.IsDir() {
+			return nil
+		}
+
+		Files = append(Files, path)
+
+		return nil
+	})
+
+	return err
 }

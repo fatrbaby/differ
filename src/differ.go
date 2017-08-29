@@ -1,13 +1,13 @@
 package main
 
 import (
+	"bufio"
+	"crypto/md5"
+	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
-	"crypto/md5"
-	"io"
-	"bufio"
-	"flag"
 )
 
 var Files []string
@@ -26,19 +26,23 @@ func main() {
 		panic(err)
 	}
 
+	counts := make(map[string]int)
+
 	for _, file := range Files {
 		md5, err := FileMd5(file)
 
 		if err == nil {
-			fmt.Println(md5)
+			counts[md5]++
 		} else {
 			fmt.Printf("%v\n", err)
 		}
 	}
+	
+	fmt.Printf("%d, %d\n", len(Files), len(counts))
 }
 
 func Scan(path string) error {
-	err := filepath.Walk(path, func (path string, f os.FileInfo, err error) error {
+	err := filepath.Walk(path, func(path string, f os.FileInfo, err error) error {
 		if f == nil {
 			return err
 		}

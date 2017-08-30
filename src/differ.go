@@ -26,19 +26,25 @@ func main() {
 		panic(err)
 	}
 
-	counts := make(map[string]int)
+	counts := make(map[string]int, len(Files))
+	sames := make(map[string][]string)
 
 	for _, file := range Files {
 		md5, err := FileMd5(file)
 
 		if err == nil {
 			counts[md5]++
+			sames[md5] = append(sames[md5], file)
 		} else {
 			fmt.Printf("%v\n", err)
 		}
 	}
-	
-	fmt.Printf("%d, %d\n", len(Files), len(counts))
+
+	for m, c := range counts {
+		if c > 1 {
+			fmt.Println(sames[m])
+		}
+	}
 }
 
 func Scan(path string) error {

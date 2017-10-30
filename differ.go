@@ -10,25 +10,32 @@ import (
 	"path/filepath"
 )
 
-type Differ struct {
-	Path      string
-	Files     []string
-	sames     map[string][]string
-	md5 hash.Hash
+type Differ interface {
+	Scan() error
+	FileMd5() (string, error)
+	Count() int
+	Sames() map[string][]string
 }
 
-func New(directory string) *Differ {
-	d := &Differ{
-		Path:      directory,
-		sames:     make(map[string][]string),
-		md5: md5.New(),
+type scanner struct {
+	path  string
+	Files []string
+	sames map[string][]string
+	md5   hash.Hash
+}
+
+func New(path string) Differ {
+	s := &scanner{
+		path:  path,
+		sames: make(map[string][]string),
+		md5:   md5.New(),
 	}
 
-	return d
+	return s
 }
 
-func (d *Differ) Scan() error {
-	err := filepath.Walk(d.Path, func(path string, f os.FileInfo, err error) error {
+func (s *scanner) Scan() error {
+	err := filepath.Walk(s.Path, func(path string, f os.FileInfo, err error) error {
 		if f == nil {
 			return err
 		}
@@ -37,7 +44,7 @@ func (d *Differ) Scan() error {
 			return nil
 		}
 
-		d.Files = append(d.Files, path)
+		s.Files = append(s.Files, path)
 
 		return nil
 	})
@@ -45,7 +52,7 @@ func (d *Differ) Scan() error {
 	return err
 }
 
-func (d *Differ) FileMd5(file string) (result string, err error) {
+func (s *scanner) FileMd5(file string) (result string, err error) {
 	f, err := os.Open(file)
 
 	if err != nil {
@@ -55,31 +62,31 @@ func (d *Differ) FileMd5(file string) (result string, err error) {
 	defer f.Close()
 
 	reader := bufio.NewReader(f)
-	d.md5.Reset()
+	defer s.md5.Reset()
 
-	if _, err := io.Copy(d.md5, reader); err != nil {
+	if _, err := io.Copy(s.md5, reader); err != nil {
 		return result, err
 	}
 
-	result = fmt.Sprintf("%x", d.md5.Sum(nil))
+	result = fmt.Sprintf("%x", s.md5.Sum(nil))
 
 	return result, nil
 }
 
-func (d *Differ) Count() int {
-	return len(d.Files)
+func (s *scanner) Count() int {
+	return len(s.Files)
 }
 
-func (d *Differ) Sames() map[string][]string {
-	if len(d.sames) > 0 {
-		return d.sames
+func (s *scanner) Sames() map[string][]string {
+	if len(s.sames) > 0 {
+		return s.sames
 	}
 
-	counts := make(map[string]int, d.Count())
+	counts := make(map[string]int, s.Count())
 	hashed := make(map[string][]string)
 
-	for _, file := range d.Files {
-		cipher, err := d.FileMd5(file)
+	for _, file := range s.Files {
+		cipher, err := s.FileMd5(file)
 
 		if err == nil {
 			counts[cipher]++
@@ -91,9 +98,9 @@ func (d *Differ) Sames() map[string][]string {
 
 	for m, c := range counts {
 		if c > 1 {
-			d.sames[m] = hashed[m]
+			s.sames[m] = hashed[m]
 		}
 	}
 
-	return d.sames
+	return s.sames
 }

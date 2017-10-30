@@ -12,7 +12,7 @@ import (
 
 type Differ interface {
 	Scan() error
-	FileMd5() (string, error)
+	FileMd5(string string) (string, error)
 	Count() int
 	Sames() map[string][]string
 }
@@ -35,7 +35,7 @@ func New(path string) Differ {
 }
 
 func (s *scanner) Scan() error {
-	err := filepath.Walk(s.Path, func(path string, f os.FileInfo, err error) error {
+	err := filepath.Walk(s.path, func(path string, f os.FileInfo, err error) error {
 		if f == nil {
 			return err
 		}

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 )
 
 type differ struct {
@@ -17,6 +18,11 @@ type differ struct {
 	sames  map[string][]string
 	md5    hash.Hash
 	chunks [][]string
+}
+
+type character struct {
+	Code string
+	Name string
 }
 
 func New(path string) *differ {
@@ -77,18 +83,35 @@ func (d *differ) Sames() map[string][]string {
 		return d.sames
 	}
 
+	d.chunksAsCPUNumber()
+
 	counts := make(map[string]int, d.Count())
 	hashed := make(map[string][]string)
+	results := make(chan character)
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(len(d.chunks))
 
-	for _, file := range d.Files {
-		cipher, err := d.FileMd5(file)
+	for _, chunk := range d.chunks {
+		go func(files []string, results chan <-character) {
+			for _, file := range flies {
+				cipher, err := d.FileMd5(file)
 
-		if err == nil {
-			counts[cipher]++
-			hashed[cipher] = append(hashed[cipher], file)
-		} else {
-			panic(err)
-		}
+				if err == nil {
+					results<- character{Code: cipher, Name: file}
+				}
+			}
+			waitGroup.Done()
+		}(chunk, results)
+	}
+
+	go func() {
+		waitGroup.Wait()
+		close(results)
+	}()
+
+	for result := range results {
+		counts[result.Code]++
+		hashed[result.Code] = append(hashed[result.Code], result.Name)
 	}
 
 	for m, c := range counts {
@@ -100,7 +123,7 @@ func (d *differ) Sames() map[string][]string {
 	return d.sames
 }
 
-func (d *differ) ChunksAsCPUNumber() [][]string {
+func (d *differ) chunksAsCPUNumber() {
 	counts := d.Count()
 	CPUNum := runtime.NumCPU()
 	size := (counts + CPUNum - 1) / CPUNum
@@ -114,6 +137,4 @@ func (d *differ) ChunksAsCPUNumber() [][]string {
 
 		d.chunks = append(d.chunks, d.Files[i:end])
 	}
-
-	return d.chunks
 }

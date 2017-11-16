@@ -12,10 +12,10 @@ import (
 )
 
 type differ struct {
-	path  string
-	Files []string
-	sames map[string][]string
-	md5   hash.Hash
+	path   string
+	Files  []string
+	sames  map[string][]string
+	md5    hash.Hash
 	chunks [][]string
 }
 
@@ -100,7 +100,7 @@ func (d *differ) Sames() map[string][]string {
 	return d.sames
 }
 
-func (d *differ)ChunksAsCPUNumber() [][]string {
+func (d *differ) ChunksAsCPUNumber() [][]string {
 	counts := d.Count()
 	CPUNum := runtime.NumCPU()
 	size := (counts + CPUNum - 1) / CPUNum

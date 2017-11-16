@@ -1,8 +1,8 @@
 package differ
 
 import (
-	"testing"
 	"runtime"
+	"testing"
 )
 
 func TestNew(t *testing.T) {

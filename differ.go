@@ -63,7 +63,7 @@ func (d *differ) FileMd5(file string) (result string, err error) {
 	defer f.Close()
 
 	reader := bufio.NewReader(f)
-	defer d.md5.Reset()
+	d.md5.Reset()
 
 	if _, err := io.Copy(d.md5, reader); err != nil {
 		return result, err

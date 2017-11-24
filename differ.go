@@ -12,6 +12,11 @@ import (
 	"sync"
 )
 
+type Differ interface {
+	Sames() map[string][]string
+	Count() int
+}
+
 type differ struct {
 	path   string
 	Files  []string
@@ -25,17 +30,17 @@ type character struct {
 	Name string
 }
 
-func New(path string) *differ {
+func New(path string) Differ {
 	d := &differ{
 		path:  path,
 		sames: make(map[string][]string),
 		md5:   md5.New(),
 	}
-
+	d.scan()
 	return d
 }
 
-func (d *differ) Scan() error {
+func (d *differ) scan() error {
 	err := filepath.Walk(d.path, func(path string, f os.FileInfo, err error) error {
 		if f == nil {
 			return err
@@ -53,7 +58,7 @@ func (d *differ) Scan() error {
 	return err
 }
 
-func (d *differ) FileMd5(file string) (result string, err error) {
+func (d *differ) fileMd5(file string) (result string, err error) {
 	f, err := os.Open(file)
 
 	if err != nil {
@@ -94,7 +99,7 @@ func (d *differ) Sames() map[string][]string {
 	for _, chunk := range d.chunks {
 		go func(files []string, results chan <-character) {
 			for _, file := range files {
-				cipher, err := d.FileMd5(file)
+				cipher, err := d.fileMd5(file)
 
 				if err == nil {
 					results<- character{Code: cipher, Name: file}

@@ -93,7 +93,7 @@ func (d *differ) Sames() map[string][]string {
 
 	for _, chunk := range d.chunks {
 		go func(files []string, results chan <-character) {
-			for _, file := range flies {
+			for _, file := range files {
 				cipher, err := d.FileMd5(file)
 
 				if err == nil {

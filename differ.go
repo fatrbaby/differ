@@ -40,7 +40,7 @@ func New(path string) Differ {
 	return d
 }
 
-func FileMd5(file string) (code string, err error)  {
+func FileMd5(file string) (code string, err error) {
 	f, err := os.Open(file)
 
 	if err != nil {
@@ -53,7 +53,7 @@ func FileMd5(file string) (code string, err error)  {
 	if _, err := io.Copy(hasher, reader); err != nil {
 		return code, err
 	}
-	
+
 	f.Close()
 	code = fmt.Sprintf("%x", hasher.Sum(nil))
 
@@ -117,12 +117,12 @@ func (d *differ) Sames() map[string][]string {
 	waitGroup.Add(len(d.chunks))
 
 	for _, chunk := range d.chunks {
-		go func(files []string, results chan <-character) {
+		go func(files []string, results chan<- character) {
 			for _, file := range files {
 				cipher, err := FileMd5(file)
 
 				if err == nil {
-					results<- character{Code: cipher, Name: file}
+					results <- character{Code: cipher, Name: file}
 				}
 			}
 			waitGroup.Done()

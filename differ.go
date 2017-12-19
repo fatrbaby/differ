@@ -40,6 +40,26 @@ func New(path string) Differ {
 	return d
 }
 
+func FileMd5(file string) (code string, err error)  {
+	f, err := os.Open(file)
+
+	if err != nil {
+		return code, err
+	}
+
+	reader := bufio.NewReader(f)
+	hasher := md5.New()
+
+	if _, err := io.Copy(hasher, reader); err != nil {
+		return code, err
+	}
+	
+	f.Close()
+	code = fmt.Sprintf("%x", hasher.Sum(nil))
+
+	return code, nil
+}
+
 func (d *differ) scan() error {
 	err := filepath.Walk(d.path, func(path string, f os.FileInfo, err error) error {
 		if f == nil {
@@ -99,7 +119,7 @@ func (d *differ) Sames() map[string][]string {
 	for _, chunk := range d.chunks {
 		go func(files []string, results chan <-character) {
 			for _, file := range files {
-				cipher, err := d.fileMd5(file)
+				cipher, err := FileMd5(file)
 
 				if err == nil {
 					results<- character{Code: cipher, Name: file}

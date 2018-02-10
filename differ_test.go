@@ -1,4 +1,4 @@
-package differ
+package main
 
 import (
 	"runtime"

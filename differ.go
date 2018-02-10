@@ -1,165 +1,113 @@
-package differ
+package main
 
 import (
-	"bufio"
-	"crypto/md5"
-	"fmt"
-	"hash"
-	"io"
-	"os"
 	"path/filepath"
+	"os"
 	"runtime"
-	"sync"
+	"fmt"
+	"crypto/md5"
+	"bufio"
+	"io"
 )
 
-type Differ interface {
-	Sames() map[string][]string
-	Count() int
-}
-
-type differ struct {
-	path   string
-	Files  []string
-	sames  map[string][]string
-	md5    hash.Hash
-	chunks [][]string
-}
-
-type character struct {
+type filepack struct {
 	Code string
 	Name string
 }
 
-func New(path string) Differ {
-	d := &differ{
-		path:  path,
-		sames: make(map[string][]string),
-		md5:   md5.New(),
-	}
-	d.scan()
-	return d
+func main() {
+	Sames("/usr/local/var/www")
 }
 
-func FileMd5(file string) (code string, err error) {
-	f, err := os.Open(file)
-
-	if err != nil {
-		return code, err
-	}
-
-	reader := bufio.NewReader(f)
+func extractMd5(files [][]string)  <-chan filepack {
+	out := make(chan filepack)
 	hasher := md5.New()
 
-	if _, err := io.Copy(hasher, reader); err != nil {
-		return code, err
+	for _, file := range files {
+		go func() {
+			hasher.Reset()
+			for _, f := range file {
+				fi, err := os.Open(f)
+
+				if err != nil {
+					panic(err)
+				}
+				reader := bufio.NewReader(fi)
+
+				if _, err := io.Copy(hasher, reader); err != nil {
+					panic(err)
+				}
+				code := fmt.Sprintf("%x", hasher.Sum(nil))
+				out <- filepack{Code: code, Name:f}
+			}
+		}()
 	}
 
-	f.Close()
-	code = fmt.Sprintf("%x", hasher.Sum(nil))
+	close(out)
 
-	return code, nil
+	return out
 }
 
-func (d *differ) scan() error {
-	err := filepath.Walk(d.path, func(path string, f os.FileInfo, err error) error {
-		if f == nil {
+func chunks(files []string, size int) [][]string {
+	t := 0
+	chunk := make([][]string, size)
+
+	for _, f := range files {
+		odd := t %  size
+		chunk[odd] = append(chunk[odd], f)
+		t++
+	}
+
+	return chunk
+}
+
+func scan(dir string) ([]string, error) {
+	var files []string
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if info == nil {
 			return err
 		}
 
-		if f.IsDir() {
+		if info.IsDir() {
 			return nil
 		}
 
-		d.Files = append(d.Files, path)
+		files = append(files, info.Name())
 
 		return nil
 	})
 
-	return err
+	return files, err
 }
 
-func (d *differ) fileMd5(file string) (result string, err error) {
-	f, err := os.Open(file)
+func Sames(dir string) {
+	files, err := scan(dir)
 
 	if err != nil {
-		return result, err
+		panic(err)
 	}
 
-	defer f.Close()
+	chunked := chunks(files, runtime.NumCPU())
 
-	reader := bufio.NewReader(f)
-	d.md5.Reset()
-
-	if _, err := io.Copy(d.md5, reader); err != nil {
-		return result, err
-	}
-
-	result = fmt.Sprintf("%x", d.md5.Sum(nil))
-
-	return result, nil
-}
-
-func (d *differ) Count() int {
-	return len(d.Files)
-}
-
-func (d *differ) Sames() map[string][]string {
-	if len(d.sames) > 0 {
-		return d.sames
-	}
-
-	d.chunksAsCPUNumber()
-
-	counts := make(map[string]int, d.Count())
+	codes := extractMd5(chunked)
+	counts := make(map[string]int)
 	hashed := make(map[string][]string)
-	results := make(chan character)
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(len(d.chunks))
-
-	for _, chunk := range d.chunks {
-		go func(files []string, results chan<- character) {
-			for _, file := range files {
-				cipher, err := FileMd5(file)
-
-				if err == nil {
-					results <- character{Code: cipher, Name: file}
-				}
-			}
-			waitGroup.Done()
-		}(chunk, results)
-	}
-
-	go func() {
-		waitGroup.Wait()
-		close(results)
-	}()
-
-	for result := range results {
-		counts[result.Code]++
-		hashed[result.Code] = append(hashed[result.Code], result.Name)
+	sames := make(map[string][]string)
+	t := 0
+	for code := range codes {
+		counts[code.Code]++
+		hashed[code.Code] = append(hashed[code.Code], code.Name)
+		t++
 	}
 
 	for m, c := range counts {
 		if c > 1 {
-			d.sames[m] = hashed[m]
+			if c > 1 {
+				sames[m] = hashed[m]
+			}
 		}
 	}
 
-	return d.sames
-}
-
-func (d *differ) chunksAsCPUNumber() {
-	counts := d.Count()
-	CPUNum := runtime.NumCPU()
-	size := (counts + CPUNum - 1) / CPUNum
-
-	for i := 0; i < counts; i += size {
-		end := i + size
-
-		if end > counts {
-			end = counts
-		}
-
-		d.chunks = append(d.chunks, d.Files[i:end])
-	}
+	fmt.Printf("%v\n", t)
 }
